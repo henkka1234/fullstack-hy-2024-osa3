@@ -1,1 +1,8 @@
-GET http://localhost:3001/api/persons
+POST https://fullstack-hy-2024-osa3.onrender.com/api/persons
+
+Content-Type: application/json
+
+{
+    "name": "nekke",
+    "number": "112"
+}
