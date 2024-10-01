@@ -70,6 +70,7 @@ return String(value)
 
 app.post('/api/persons', (request, response) => {
     const body = request.body
+    console.log("log body ", body)
     if (!body.name || !body.number) {
         return response.status(400).json({ 
         error: 'Name or number missing' 
