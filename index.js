@@ -9,41 +9,31 @@ app.use(express.json())
 app.use(express.static('dist'))
 app.use(cors())
 
+const errorHandler = (error, request, response, next) => {
+  console.error(error.message)
+
+  if (error.name === 'CastError') {
+    return response.status(400).send({ error: 'malformatted id' })
+  }
+  else if (error.name === 'ValidationError'){
+    return response.status(400).json({error: error.message})
+  }
+  next(error)
+}
 
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :wanted_data'))
 
 morgan.token('wanted_data', function (req, res) { return JSON.stringify(req.body) })
 
-let persons = [
-      { 
-        name: "Arto Hellas", 
-        number: "040-123456",
-        id: "1"
-      },
-      { 
-        name: "Ada Lovelace", 
-        number: "39-44-5323523",
-        id: "2"
-      },
-      { 
-        name: "Dan Abramov", 
-        number: "12-43-234345",
-        id: "3"
-      },
-      { 
-        name: "Mary Poppendieck", 
-        number: "39-23-6423122",
-        id: "4"
-      }
-    ]
-
 
 app.get('/info', (request, response) => {
-    const size = persons.length
     const timestamp = new Date();
-    response.send(
-    `<p>Phonebooks has info for ${size} people</p> 
-    <p>${timestamp.toString()}</p>`)
+    Contact.countDocuments({}).then(sum => {
+      response.send(
+        `<p>Phonebooks has info for ${sum} people</p> 
+        <p>${timestamp.toString()}</p>`)
+    })
+
   })
   
 app.get('/api/persons', (request, response) => {
@@ -52,59 +42,61 @@ app.get('/api/persons', (request, response) => {
   })
 })
   
-app.get('/api/persons/:id', (request, response) => {
+app.get('/api/persons/:id', (request, response, next) => {
     const id = request.params.id
-    const contact = persons.find(person => person.id === id)
-    if(contact){
-        response.json(contact)
-    }
-    else{
+    Contact.findById(id).then(contact => {
+      if(contact){
+      response.json(contact)
+      }
+      else{
         response.status(404).end()
-    }
+      }
+    }).catch(error => next(error))
 })
 
 app.delete('/api/persons/:id', (request, response) => {
     const id = request.params.id
-    persons = persons.filter(note => note.id !== id)
-    response.status(204).end()
+    Contact.findByIdAndDelete(id).then(result => {
+      response.status(204).end()
+    }).catch(error => next(error))
+  
   })
 
-const generateId = () => {
-const value = Math.floor(Math.random()*1000)
-return String(value)
-}
-
-app.post('/api/persons', (request, response) => {
+app.post('/api/persons', (request, response, next) => {
     const body = request.body
     console.log("log body ", body)
+    /*
     if (!body.name || !body.number) {
         return response.status(400).json({ 
         error: 'Name or number missing' 
         })
     }
-
-    if(persons.filter(person => person.name===body.name).length!==0){
-        return response.status(400).json({
-        error: 'Name already in contacts'
-        })
-    }
-
-    let new_id = generateId()
-    //Endless loop if more than 1000 contacts
-    while(persons.filter(person => person.id === new_id).length !== 0){
-        console.log("id already exists, generating new one")
-        new_id = generateId()
-    }
-
-    const person = {
+  */
+    const person = new Contact({
         name: body.name,
         number: body.number,
-        id: new_id,
-    }
+    })
 
-    persons = persons.concat(person)
-    response.json(person)
+    person.save().then(savedContact => {
+      response.json(savedContact)
+    }).catch(error  => next(error))
 })  
+
+app.put('/api/persons/:id', (request, response, next)=> {
+  const {name, number} = request.body
+
+  Contact.findByIdAndUpdate(request.params.id, {name, number}, 
+    {new: true, runValidators: true, context: 'query'}).then(updatedContact => {
+      if(updatedContact===null){
+        response.status(410).end()
+      }
+      else{
+      response.json(updatedContact)
+      }
+  }).catch(error => next(error))
+})
+
+app.use(errorHandler)
 
 const PORT = process.env.PORT
 app.listen(PORT, () => {
