@@ -23,17 +23,17 @@ const contactSchema = new mongoose.Schema({
 const Contact = mongoose.model('Contact', contactSchema)
 
 if (process.argv.length===3) {
-  findContacts();
+  findContacts()
 }
 
 if (process.argv.length===5){
-    const contact = new Contact({
-      name: contactName,
-      number: contactNumber,
+  const contact = new Contact({
+    name: contactName,
+    number: contactNumber,
   })
 
-  contact.save().then(result => {
-    console.log("Added", contactName, "number", contactNumber, "to phonebook")
+  contact.save().then(() => {
+    console.log('Added', contactName, 'number', contactNumber, 'to phonebook')
     mongoose.connection.close()
   })
 
@@ -41,7 +41,7 @@ if (process.argv.length===5){
 
 
 function findContacts () {
-  console.log("phonebook:")
+  console.log('phonebook:')
   Contact.find({}).then(result => {
     result.forEach(contact => {
       console.log(contact.name, contact.number)
